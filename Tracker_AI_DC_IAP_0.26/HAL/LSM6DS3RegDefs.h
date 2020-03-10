@@ -1,0 +1,127 @@
+#ifndef _LSM6DS3_REG_DEFS_H_
+#define _LSM6DS3_REG_DEFS_H_
+
+
+/**/
+#define LSM6DS3_FUNC_CFG_ACCESS_ADDR  0x01
+#define LSM6DS3_FUNC_CFG_ACCESS_VALUE 0x00
+/*
+FTH
+*/
+#define LSM6DS3_FIFO_CTRL1_ADDR  0x06
+#define LSM6DS3_FIFO_CTRL1_VALUE 0xFF
+
+/**/
+#define LSM6DS3_FIFO_CTRL2_ADDR  0x07
+#define LSM6DS3_FIFO_CTRL2_VALUE 0x00
+
+/**/
+#define LSM6DS3_FIFO_CTRL3_ADDR  0x08
+#define LSM6DS3_FIFO_CTRL3_VALUE 0x09
+
+/*
+
+*/
+#define LSM6DS3_FIFO_CTRL4_ADDR  0x09
+#define LSM6DS3_FIFO_CTRL4_VALUE 0x00
+
+/*
+
+*/
+#define LSM6DS3_FIFO_CTRL5_ADDR         0x0A
+#define LSM6DS3_FIFO_CTRL5_VALUE        0x26
+#define LSM6DS3_FIFO_CTRL5_DISABLE_FIFO 0x00  /*disable FIFO*/
+/**/
+#define LSM6DS3_ORIENT_CFG_G_ADDR 0x0B
+#define LSM6DS3_ORIENT_CFG_G_VALUE 0x20
+
+
+/* */
+#define LSM6DS3_INT1_CTRL_ADDR  0x0D
+#define LSM6DS3_INT1_CTRL_VALUE 0x00
+
+/* */
+#define LSM6DS3_INT2_CTRL_ADDR  0x0E
+#define LSM6DS3_INT2_CTRL_VALUE 0x00
+
+/**/
+#define LSM6DS3_WHO_AM_I_ADDR   0x0F
+#define LSM6DS3_WHO_AM_I_VALUE  0x69
+/* */
+#define LSM6DS3_CTRL1_XL_ADDR       0x10
+#define LSM6DS3_CTRL1_XL_VALUE      0x43
+#define LSM6DS3_CTRL1_XL_HIGH_ODR   0x70 
+#define LSM6DS3_ACC_FS              (0.061/1000)
+/* */
+#define LSM6DS3_CTRL2_G_ADDR        0x11
+#define LSM6DS3_CTRL2_G_VALUE       0x42
+#define LSM6DS3_CTRL2_G_HIGH_ODR    0x70
+#define LSM6DS3_CTRL2_G_POWER_DOWN  0x00
+#define LSM6DS3_GYRO_FS             (4.375/1000)
+/* */
+#define LSM6DS3_CTRL3_C_ADDR    0x12
+#define LSM6DS3_CTRL3_C_VALUE   0x74
+#define LSM6DS3_CTRL3_C_RESET   0x01 /*sw reset*/
+/* */
+#define LSM6DS3_CTRL4_C_ADDR    0x13
+#define LSM6DS3_CTRL4_C_VALUE   0x8C
+
+/* */
+#define LSM6DS3_CTRL5_C_ADDR    0x14
+#define LSM6DS3_CTRL5_C_VALUE   0x00
+
+/* */
+#define LSM6DS3_CTRL6_C_ADDR    0x15
+#define LSM6DS3_CTRL6_C_VALUE   0x00
+
+/* */
+#define LSM6DS3_CTRL7_G_ADDR       0x16
+#define LSM6DS3_CTRL7_G_VALUE      0x00
+#define LSM6DS3_CTRL7_G_RESET_HP   0x68  /*RESET Gyro HP*/
+
+/* */
+#define LSM6DS3_CTRL8_XL_ADDR     0x17
+#define LSM6DS3_CTRL8_XL_VALUE    0xC4
+
+/* */
+#define LSM6DS3_CTRL9_XL_ADDR   0x18
+#define LSM6DS3_CTRL9_XL_VALUE  0x38
+
+#define LSM6DS3_CTRL10_G_ADDR     0x19
+#define LSM6DS3_CTRL10_G_VALUE    0x38
+#define LSM6DS3_CTRL10_G_DIS_GYRO 0x00
+
+/**/
+#define LSM6DS3_STATUS_REG_ADDR 0x1E
+
+#define LSM6DS3_OUTX_L_XL 0x28
+#define LSM6DS3_OUTX_H_XL 0x29
+#define LSM6DS3_OUTY_L_XL 0x2A
+#define LSM6DS3_OUTY_H_XL 0x2B
+#define LSM6DS3_OUTZ_L_XL 0x2C
+#define LSM6DS3_OUTZ_H_XL 0x2D
+
+#define LSM6DS3_OUTX_L_G 0x22
+#define LSM6DS3_OUTX_H_G 0x23
+/*
+unread word
+*/
+#define LSM6DS3_FIFO_STATUS1_ADDR 0x3A
+#define LSM6DS3_FIFO_STATUS2_ADDR 0x3B
+
+/*
+Word of recursive pattern read at the next reading.
+*/
+#define LSM6DS3_FIFO_STATUS3_ADDR 0x3C
+#define LSM6DS3_FIFO_STATUS4_ADDR 0x3D
+
+/*
+
+*/
+#define LSM6DS3_FIFO_DATA_OUT_L_ADDR 0x3E
+#define LSM6DS3_FIFO_DATA_OUT_H_ADDR 0x3F
+
+/**/
+#define LSM6DS3_TAP_CFG_ADDR 0x58
+#define LSM6DS3_TAP_CFG_VALUE 0x10
+#endif
