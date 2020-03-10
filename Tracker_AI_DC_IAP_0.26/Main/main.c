@@ -341,6 +341,7 @@ static void ModbusOverLoRa(void *p_arg)
     static unsigned char  read_buffer[300];
     static unsigned short reply_num_of_bytes;
     static unsigned short num_of_bytes;
+    static unsigned short delay_count = 0;
     
     ModbusPortInit(0);
     ProtocolInit();
@@ -350,14 +351,35 @@ static void ModbusOverLoRa(void *p_arg)
         {
             if(read_buffer[0] == GlobalVariable.ConfigPara.ComID || read_buffer[0] == 0)
             {
-                reply_num_of_bytes = 0;
+                delay_count = 0;
+							  reply_num_of_bytes = 0;
                 reply_num_of_bytes = ProtocolAnalysis(read_buffer,send_buffer,num_of_bytes);
                 if((reply_num_of_bytes > 0)&&(read_buffer[0] != 0))
                 {
                     ModbusSend(0,reply_num_of_bytes,send_buffer);
                 }
             }
+						else
+						{
+							if((delay_count++) >= (5 * 60 * 1000 /10))  //持续5分钟收的没有自己的ID或者广发
+							{
+								LoRaModulePowerOff();                     //lora模块断电
+								OSTimeDly(100,OS_OPT_TIME_DLY,&err);      //延时1S
+								LoRaModulePowerOn();                      //lora模块上电
+								delay_count = 0;													//重新计时
+							}						
+						}
         }
+				else
+				{
+				  if((delay_count++) >= (5 * 60 * 1000 /10))  //持续5分钟收的没有数据或校验错误
+					{
+					  LoRaModulePowerOff();                     //lora模块断电
+					  OSTimeDly(100,OS_OPT_TIME_DLY,&err);      //延时1S
+						LoRaModulePowerOn();                      //lora模块上电
+						delay_count = 0;													//重新计时
+					}						
+				}
         OSTimeDly(1,OS_OPT_TIME_DLY,&err);
     }
 }

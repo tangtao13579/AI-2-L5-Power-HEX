@@ -3,9 +3,10 @@
 #include "stm32f10x_dma.h"
 #include "ModbusFrame.h"
 
-#define TX_EN_485() GPIO_SetBits(GPIOA,GPIO_Pin_15)
-#define RX_EN_485() GPIO_ResetBits(GPIOA,GPIO_Pin_15)
-
+#define TX_EN_485() {}
+#define RX_EN_485() {}
+#define Power_on_LoRa()  GPIO_ResetBits(GPIOA, GPIO_Pin_15)
+#define Power_off_LoRa() GPIO_SetBits(GPIOA, GPIO_Pin_15)
 /***************************************************************************************************
                                 Private variable declaration
 ***************************************************************************************************/
@@ -73,18 +74,17 @@ static void UART4Init()
     GPIOInitStruc.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOC, &GPIOInitStruc);
     
-	//485方向IO设置
-    /* UART4 DIR*/
-	DBGMCU->CR = DBGMCU->CR & ~((uint32_t)1<<5); 														// 不分配跟踪引脚，释放PB3
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB | RCC_APB2Periph_AFIO, ENABLE); 	// 使能复用时钟和引脚GPIO时钟
-	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable,ENABLE); 											// 切换到SWJ调试，释放PA15，PB4, PB3
-	
+		RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
+    GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE); 
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
+  
+  /* Power PIN-Hardware power:reset*/
     GPIOInitStruc.GPIO_Pin   = GPIO_Pin_15;
     GPIOInitStruc.GPIO_Mode  = GPIO_Mode_Out_PP;
-    GPIOInitStruc.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIOInitStruc.GPIO_Speed = GPIO_Speed_2MHz;
     GPIO_Init(GPIOA, &GPIOInitStruc);
-    RX_EN_485();
-    
+    Power_on_LoRa();
+		
     USARTInitStruc.USART_BaudRate            = 9600;
     USARTInitStruc.USART_WordLength          = USART_WordLength_8b;
     USARTInitStruc.USART_StopBits            = USART_StopBits_1;
@@ -159,6 +159,16 @@ void ModbusPortInit(unsigned char port_number)
             break;
     }
         
+}
+
+void LoRaModulePowerOff(void)
+{
+	Power_off_LoRa();
+}
+
+void LoRaModulePowerOn(void)
+{
+	Power_on_LoRa();
 }
 
 void ModbusSend(unsigned char port_number, unsigned short num_of_byte, unsigned char *SendBuffer)
