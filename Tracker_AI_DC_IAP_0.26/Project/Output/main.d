@@ -39,6 +39,7 @@
 .\output\main.o: ..\uCOS-III\Source\os_type.h
 .\output\main.o: ..\uCOS-III\Ports\os_cpu.h
 .\output\main.o: ..\Main\GlobalDefine.h
+.\output\main.o: ..\Main\GlobalOs.h
 .\output\main.o: ..\HAL\AngleSensor.h
 .\output\main.o: ..\HAL\MotorControl.h
 .\output\main.o: ..\HAL\LED.h

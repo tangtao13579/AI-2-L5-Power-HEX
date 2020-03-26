@@ -1,6 +1,7 @@
 #include "BatteryPower.h"
 #include "PVPower.h"
 #include "GlobalDefine.h"
+#include "GlobalOs.h"
 
 #define TASK_POWER_PERIOD 100 /*unit ms*/
 
@@ -214,8 +215,9 @@ void PowerInit()
 /*100ms*/
 void PowerMangement()
 {
-    static unsigned char charge_delay_count = 0;
-    
+	  OS_ERR err;
+	  static unsigned char charge_delay_count = 0;
+	
 /* Get and update battery information  */
     GetBatteryInfo();
 
@@ -285,7 +287,61 @@ void PowerMangement()
     {
         charge_delay_count = 0;
         ChargeCmd(0);
-        ClosePVPower();
     }
+		
+		OSFlagPend((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,
+				       (OS_FLAGS	)T0AngleNoChange_first_step1_FLAG,
+		     	     (OS_TICK     )0,
+				       (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
+				       (CPU_TS*     )0,
+				       (OS_ERR*	    )&err);
+		if(err == OS_ERR_NONE)
+		{
+			  if(GlobalVariable.WarningAndFault.BatError ==0)
+				{
+			      ClosePVPower();                                         //switch to BAT
+			  }
+			  OSFlagPost((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,      //post a event flag step2
+								   (OS_FLAGS	  )T0AngleNoChange_first_step2_FLAG,
+								   (OS_OPT	  )OS_OPT_POST_FLAG_SET,
+					         (OS_ERR*	  )&err);
+		}
+		OSFlagPend((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,
+				       (OS_FLAGS	)T0AngleNoChange_first_step3_FLAG,
+		     	     (OS_TICK     )0,
+				       (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
+				       (CPU_TS*     )0,
+				       (OS_ERR*	    )&err);
+		if(err == OS_ERR_NONE)
+		{
+			  OpenPVPower();                                              //switch to PV
+		}
+		OSFlagPend((OS_FLAG_GRP*)&Motor_continuous_Flags,
+				       (OS_FLAGS	)Motor_continuous_step1_FLAG,
+		     	     (OS_TICK     )0,
+				       (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
+				       (CPU_TS*     )0,
+				       (OS_ERR*	    )&err);
+		if(err == OS_ERR_NONE)
+		{
+			  if(GlobalVariable.WarningAndFault.BatError ==0)
+				{
+			      ClosePVPower();                                         //switch to BAT
+			  }
+			  OSFlagPost((OS_FLAG_GRP*)&Motor_continuous_Flags,           //post a event flag step2
+								   (OS_FLAGS	  )Motor_continuous_step2_FLAG,
+								   (OS_OPT	  )OS_OPT_POST_FLAG_SET,
+					         (OS_ERR*	  )&err);
+		}
+		OSFlagPend((OS_FLAG_GRP*)&Motor_continuous_Flags,
+				       (OS_FLAGS	)Motor_continuous_step3_FLAG,
+		     	     (OS_TICK     )0,
+				       (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
+				       (CPU_TS*     )0,
+				       (OS_ERR*	    )&err);
+		if(err == OS_ERR_NONE)
+		{
+			  OpenPVPower();                                              //switch to PV
+		}
 }
 

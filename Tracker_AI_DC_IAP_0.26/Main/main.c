@@ -3,6 +3,7 @@
 #include "os.h"
 #include "cpu.h"
 #include "GlobalDefine.h"
+#include "GlobalOs.h"
 #include "AngleSensor.h"
 #include "MotorControl.h"
 #include "LED.h"
@@ -75,6 +76,11 @@ OS_TCB MotorAngleControlTCB;
 OS_TCB ParameterSaveTCB;
 OS_TCB LedIWDGTCB;
 /***************************************************************************************************
+                                    OS EVENT FLAG
+***************************************************************************************************/
+OS_FLAG_GRP	T0AngleNoChange_first_Flags;  //create a event flag
+OS_FLAG_GRP	Motor_continuous_Flags;       //create a event flag
+/***************************************************************************************************
                                     Task functions declaration
 ***************************************************************************************************/
 static void AngleMangement(void *p_arg);
@@ -94,11 +100,19 @@ static void LedIWDG(void *p_arg);
 int main(void)
 {
     OS_ERR err;
-
+	
     OSInit(&err);
+	  OSFlagCreate((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,		   //指向事件标志组
+                 (CPU_CHAR*	  )"T0AngleNoChange first Flags",	     //名字
+                 (OS_FLAGS	  )T0AngleNoChange_first_FLAGS_VALUE,  //事件标志组初始值
+                 (OS_ERR*  	  )&err);			                         //错误码
+	  OSFlagCreate((OS_FLAG_GRP*)&Motor_continuous_Flags,		         //指向事件标志组
+                 (CPU_CHAR*	  )"Motor continuous Flags",	         //名字
+                 (OS_FLAGS	  )Motor_continuous_FLAGS_VALUE,       //事件标志组初始值
+                 (OS_ERR*  	  )&err);		
     NVICInit();  
     ParaInit();
-    IWDGInit();
+//    IWDGInit();
     OSTaskCreate((OS_TCB *    )&ParameterSaveTCB,
                  (CPU_CHAR *  )"ParameterSave",
                  (OS_TASK_PTR )ParameterSave,
@@ -330,8 +344,8 @@ static void PowerManagement(void *p_arg)
     PowerInit();
     while(1)
     {
-       PowerMangement();
-       OSTimeDly(10,OS_OPT_TIME_DLY,&err); 
+        PowerMangement();
+        OSTimeDly(10,OS_OPT_TIME_DLY,&err); 
     }
 }
 static void ModbusOverLoRa(void *p_arg)
@@ -476,9 +490,9 @@ static void MotorAngleControl(void *p_arg)
     OS_ERR               err;
     static unsigned char motor_control_state = 0;
     static unsigned char dir_sw_delay = 0;
+	  static unsigned short motor_turn_delay = 0;    //电机连续运行时间
     float motor_lead_angle = 0.0f;
     p_arg = p_arg;
-    
     MotorInit();
     
     while(1)
@@ -528,6 +542,33 @@ static void MotorAngleControl(void *p_arg)
                         motor_control_state = 0;
                         dir_sw_delay = 0;
                         GlobalVariable.Motor[0].MotorControlDir = 0;
+											  
+											  OSFlagPend((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,
+				                           (OS_FLAGS	)T0AngleNoChange_first_step2_FLAG,
+		     	                         (OS_TICK     )0,
+				                           (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
+				                           (CPU_TS*     )0,
+				                           (OS_ERR*	    )&err);
+		                    if(err == OS_ERR_NONE)
+		                    {
+			                      OSFlagPost((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,      //post a event flag step3
+								                       (OS_FLAGS	  )T0AngleNoChange_first_step3_FLAG,
+								                       (OS_OPT	  )OS_OPT_POST_FLAG_SET,
+					                             (OS_ERR*	  )&err);
+		                    } 
+                        OSFlagPend((OS_FLAG_GRP*)&Motor_continuous_Flags,
+				                           (OS_FLAGS	)Motor_continuous_step2_FLAG,
+		     	                         (OS_TICK     )0,
+				                           (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
+				                           (CPU_TS*     )0,
+				                           (OS_ERR*	    )&err);
+		                    if(err == OS_ERR_NONE)
+		                    {                  
+			                      OSFlagPost((OS_FLAG_GRP*)&Motor_continuous_Flags,           //post a event flag step3
+								                       (OS_FLAGS	  )Motor_continuous_step3_FLAG,
+								                       (OS_OPT	  )OS_OPT_POST_FLAG_SET,
+					                             (OS_ERR*	  )&err);
+		                    }												
                     }
                     break;
                 case 1:/* East */
@@ -536,10 +577,12 @@ static void MotorAngleControl(void *p_arg)
                     {
                         MotorAllStop(); 
                         motor_control_state = 0;
+											  motor_turn_delay = 0;    //电机连续运行时间清零
                     }
                     else
                     {
                         MotorTurnEast(0);
+											  motor_turn_delay ++;     //电机连续运行时间累加
                     }
                     break;
                 case 2:/* West */
@@ -548,15 +591,18 @@ static void MotorAngleControl(void *p_arg)
                     {
                         MotorAllStop();
                         motor_control_state = 0;
+											  motor_turn_delay = 0;    //电机连续运行时间清零
                     }
                     else
                     {
                         MotorTurnWest(0);
+											  motor_turn_delay ++;     //电机连续运行时间累加
                     }
                     break;
                 default:
                     MotorAllStop();
-                    motor_control_state = 0;        
+                    motor_control_state = 0;
+										motor_turn_delay = 0;        //电机连续运行时间清零
             }
         }
         else
@@ -564,11 +610,48 @@ static void MotorAngleControl(void *p_arg)
             MotorAllStop();
             motor_control_state = 0;
             GlobalVariable.Motor[0].MotorControlDir = 0;
+					  motor_turn_delay = 0;                                  //电机连续运行时间清零
+						
+					  OSFlagPend((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,
+				               (OS_FLAGS	)T0AngleNoChange_first_step2_FLAG,
+		     	             (OS_TICK     )0,
+				               (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
+				               (CPU_TS*     )0,
+				               (OS_ERR*	    )&err);
+		        if(err == OS_ERR_NONE)
+		        {
+			          OSFlagPost((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,      //post a event flag step3
+								           (OS_FLAGS	  )T0AngleNoChange_first_step3_FLAG,
+								           (OS_OPT	  )OS_OPT_POST_FLAG_SET,
+					                 (OS_ERR*	  )&err);
+		        } 
+						OSFlagPend((OS_FLAG_GRP*)&Motor_continuous_Flags,
+				               (OS_FLAGS	)Motor_continuous_step2_FLAG,
+		     	             (OS_TICK     )0,
+				               (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
+				               (CPU_TS*     )0,
+				               (OS_ERR*	    )&err);
+		        if(err == OS_ERR_NONE)
+		        {
+			          OSFlagPost((OS_FLAG_GRP*)&Motor_continuous_Flags,          //post a event flag step3
+								           (OS_FLAGS	  )Motor_continuous_step3_FLAG,
+								           (OS_OPT	  )OS_OPT_POST_FLAG_SET,
+					                 (OS_ERR*	  )&err);
+		        } 
+						
         }
+				
+				if(motor_turn_delay > 2000)                                //连续转动时间超出20S，换电池驱动
+				{
+					  motor_turn_delay = 0;                                  //电机连续运行时间清零
+					  OSFlagPost((OS_FLAG_GRP*)&Motor_continuous_Flags,      //post a event flag step1
+					             (OS_FLAGS	  )Motor_continuous_step1_FLAG,
+								       (OS_OPT	  )OS_OPT_POST_FLAG_SET,
+					             (OS_ERR*	  )&err);	
+				}
         
         GlobalVariable.Motor[0].MotorRunningState = GetMotorRunningState(0);
         GlobalVariable.Motor[0].MotorActualDir = GetMotorDirState(0);
-        
         OSTimeDly(1,OS_OPT_TIME_DLY,&err);
     }
 }
@@ -658,13 +741,13 @@ static void Astronomy(void *p_arg)
 static void LedIWDG(void *p_arg)
 {
     OS_ERR           err;
-    unsigned char   i = 0;
+    unsigned char   i = 0;	
     p_arg = p_arg;
-    
+  
     LEDInit();
     while(1)
     {
-        i++;
+			  i++;
         if(GlobalVariable.WorkMode.SystemStatus == 0)
         {
             if(i > 6)

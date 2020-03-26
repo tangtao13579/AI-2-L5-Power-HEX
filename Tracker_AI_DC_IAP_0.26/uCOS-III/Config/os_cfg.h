@@ -49,7 +49,7 @@
 
 
                                              /* ----------------------------- EVENT FLAGS --------------------------- */
-#define OS_CFG_FLAG_EN                  0u   /* Enable (1) or Disable (0) code generation for EVENT FLAGS             */
+#define OS_CFG_FLAG_EN                  1u   /* Enable (1) or Disable (0) code generation for EVENT FLAGS             */
 #define OS_CFG_FLAG_DEL_EN              0u   /*     Include code for OSFlagDel()                                      */
 #define OS_CFG_FLAG_MODE_CLR_EN         0u   /*     Include code for Wait on Clear EVENT FLAGS                        */
 #define OS_CFG_FLAG_PEND_ABORT_EN       0u   /*     Include code for OSFlagPendAbort()                                */

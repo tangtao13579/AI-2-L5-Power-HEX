@@ -13,7 +13,7 @@ void PVPowerInit()
     GPIOInitStruc.GPIO_Mode  = GPIO_Mode_Out_PP;
     GPIOInitStruc.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(GPIOA, &GPIOInitStruc);
-    GPIO_ResetBits(GPIOA,GPIO_Pin_8);
+    GPIO_ResetBits(GPIOA,GPIO_Pin_8);  //open PV power
 }
 
 void OpenPVPower()

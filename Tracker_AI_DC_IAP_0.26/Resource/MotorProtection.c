@@ -1,4 +1,5 @@
 #include "GlobalDefine.h"
+#include "GlobalOs.h"
 
 #define TASK_MOTOR_PROTECTION_PERIOD  50
 
@@ -99,11 +100,13 @@ void DetectSoftLimit()
 
 void DetectMotorReverseAngleNoChange()
 {
-    static float pre_angle = 0.0f;
+	  OS_ERR err;
+	  static float pre_angle = 0.0f;
     static unsigned short east_delay_count = 0;
     static unsigned short west_delay_count = 0;
-    
-    if(GlobalVariable.Motor[0].MotorActualDir == 1)/*east*/
+    static unsigned short T0AngleNoChange_first_flag = 0;
+	
+	  if(GlobalVariable.Motor[0].MotorActualDir == 1)/*east*/
     {
         west_delay_count = 0;
         east_delay_count ++;
@@ -124,11 +127,37 @@ void DetectMotorReverseAngleNoChange()
             }
             if(((pre_angle - GlobalVariable.Motor[0].ActualAngle) > 1.0f) || ((pre_angle - GlobalVariable.Motor[0].ActualAngle) < -1.0f))
             {
-                GlobalVariable.WarningAndFault.T0AngleNoChange = 0;
+                GlobalVariable.WarningAndFault.T0AngleNoChange = 0;      //clear the fault
+								T0AngleNoChange_first_flag = 0;                          //clear the first happen flag
             }
             else
             {
-                GlobalVariable.WarningAndFault.T0AngleNoChange = 1;
+                GlobalVariable.WarningAndFault.T0AngleNoChange = 1;      //角度不变故障-即电机不转
+								if(T0AngleNoChange_first_flag == 1)
+								{
+									  OSFlagPend((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,
+				                       (OS_FLAGS	)T0AngleNoChange_first_step2_FLAG,
+		     	                         (OS_TICK     )0,
+				                           (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
+				                           (CPU_TS*     )0,
+				                           (OS_ERR*	    )&err);
+		                if(err == OS_ERR_NONE)
+		                {
+			                  OSFlagPost((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,      //post a event flag step3
+								                   (OS_FLAGS	  )T0AngleNoChange_first_step3_FLAG,
+								                   (OS_OPT	  )OS_OPT_POST_FLAG_SET,
+					                         (OS_ERR*	  )&err);
+		                } 
+								}
+							  else if(T0AngleNoChange_first_flag == 0 && GlobalVariable.WarningAndFault.BatError == 0)                      //if first time happen
+								{
+								    T0AngleNoChange_first_flag = 1;                             //happened
+                    GlobalVariable.WarningAndFault.T0AngleNoChange = 0;         //clear the fault
+									  OSFlagPost((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,      //post a event flag step1
+								               (OS_FLAGS	  )T0AngleNoChange_first_step1_FLAG,
+								               (OS_OPT	  )OS_OPT_POST_FLAG_SET,
+					                     (OS_ERR*	  )&err);
+								}
             }
         }
     }
@@ -153,11 +182,37 @@ void DetectMotorReverseAngleNoChange()
             }
             if(((pre_angle - GlobalVariable.Motor[0].ActualAngle) > 1.0f) || ((pre_angle - GlobalVariable.Motor[0].ActualAngle) < -1.0f))
             {
-                GlobalVariable.WarningAndFault.T0AngleNoChange = 0;
+                GlobalVariable.WarningAndFault.T0AngleNoChange = 0;      //clear the fault
+							  T0AngleNoChange_first_flag = 0;                          //clear the first happen flag
             }
             else
             {
-                GlobalVariable.WarningAndFault.T0AngleNoChange = 1;
+                GlobalVariable.WarningAndFault.T0AngleNoChange = 1;      //角度不变故障-即电机不转
+							  if(T0AngleNoChange_first_flag == 1)
+								{
+									  OSFlagPend((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,
+				                       (OS_FLAGS	)T0AngleNoChange_first_step2_FLAG,
+		     	                         (OS_TICK     )0,
+				                           (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
+				                           (CPU_TS*     )0,
+				                           (OS_ERR*	    )&err);
+		                if(err == OS_ERR_NONE)
+		                {
+			                  OSFlagPost((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,      //post a event flag step3
+								                   (OS_FLAGS	  )T0AngleNoChange_first_step3_FLAG,
+								                   (OS_OPT	  )OS_OPT_POST_FLAG_SET,
+					                         (OS_ERR*	  )&err);
+		                } 
+								}
+							  else if(T0AngleNoChange_first_flag == 0 && GlobalVariable.WarningAndFault.BatError == 0)                      //if first time happen
+								{
+								    T0AngleNoChange_first_flag = 1;                             //happened
+                    GlobalVariable.WarningAndFault.T0AngleNoChange = 0;         //clear the fault
+									  OSFlagPost((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,      //post a event flag step1
+								               (OS_FLAGS	  )T0AngleNoChange_first_step1_FLAG,
+								               (OS_OPT	  )OS_OPT_POST_FLAG_SET,
+					                     (OS_ERR*	  )&err);
+								}
             }
         }
     }
