@@ -2,15 +2,19 @@
 #include "stm32f10x_gpio.h"
 #include "stm32f10x_tim.h"
 #include "MotorControl.h"
+#include "GlobalDefine.h"
 
-#define TIMER_PERIOD        36000  /*Timer period count 36000 = 1ms*/
+#define TIMER_PERIOD        36000/1.1  /*Timer period count 36000 = 1ms 频率改为1.1K*/
 #define PWM_START_VOLTAGE   8
 #define PWM_STOP_VOLTAGE    27
 #define MOTOR_RATED_VOLTAGE 30
-#define PWM_RAMP_TIME       150
+#define PWM_RAMP_TIME       2000
 #define START_COUNT         (TIMER_PERIOD - (TIMER_PERIOD * PWM_START_VOLTAGE / MOTOR_RATED_VOLTAGE))
 #define COUNT_PER_MS        (TIMER_PERIOD * (PWM_STOP_VOLTAGE - PWM_START_VOLTAGE) / (MOTOR_RATED_VOLTAGE * PWM_RAMP_TIME))
-
+#define COUNT_PER_MS1       (TIMER_PERIOD * (12 - 8) / (MOTOR_RATED_VOLTAGE * PWM_RAMP_TIME))
+#define COUNT_PER_MS2       (TIMER_PERIOD * (19 - 12) / (MOTOR_RATED_VOLTAGE * PWM_RAMP_TIME))
+#define COUNT_PER_MS3       (TIMER_PERIOD * (27 - 19) / (MOTOR_RATED_VOLTAGE * PWM_RAMP_TIME))
+extern GlobalVariableDef GlobalVariable;
 
 /***************************************************************************************************
                                 Private variable declaration
@@ -54,7 +58,7 @@ typedef struct
 static MotorListDef  _motor_list[MAX_MOTOR_NUM];
 static unsigned char _current_run_motor_ID;
 static unsigned short _pwm_count;
-
+static signed short _pwm_test = 1;
 /***************************************************************************************************
                                 Private functions
 ***************************************************************************************************/
@@ -92,7 +96,8 @@ static void TimerStart()
 
 static void TimerStop()
 {
-    _pwm_count = 0;
+		_pwm_test = 0;
+	  _pwm_count = 0;
     TIM_Cmd(TIM3, DISABLE);
 }
 
@@ -141,11 +146,25 @@ static void MotorEW(unsigned char motor_ID, MotorDirDef EW)
 {
     if(EW == MotorDirEast)
     {
-        GPIO_SetBits(_motor_list[motor_ID].MotorIO.EW_group,_motor_list[motor_ID].MotorIO.EW_pin);
+        if(GlobalVariable.ConfigPara.MotorOrientation==0)  //朝东
+			  {
+			      GPIO_SetBits(_motor_list[motor_ID].MotorIO.EW_group,_motor_list[motor_ID].MotorIO.EW_pin);
+				}
+				else                                               //朝西
+				{
+					  GPIO_ResetBits(_motor_list[motor_ID].MotorIO.EW_group,_motor_list[motor_ID].MotorIO.EW_pin);
+				}
     }
     else if(EW == MotorDirWest)
     {
-        GPIO_ResetBits(_motor_list[motor_ID].MotorIO.EW_group,_motor_list[motor_ID].MotorIO.EW_pin);
+         if(GlobalVariable.ConfigPara.MotorOrientation==0)  //朝东
+			   {  
+			       GPIO_ResetBits(_motor_list[motor_ID].MotorIO.EW_group,_motor_list[motor_ID].MotorIO.EW_pin);
+				 }
+				 else
+				 {
+				     GPIO_SetBits(_motor_list[motor_ID].MotorIO.EW_group,_motor_list[motor_ID].MotorIO.EW_pin);
+				 }
     }
 }
 
@@ -245,9 +264,9 @@ void TIM3_IRQHandler()
     {
         TIM_ClearITPendingBit(TIM3, TIM_IT_Update); 
         _pwm_count ++;
-        if (_pwm_count >= PWM_RAMP_TIME)
-        {
-            TimerStop();
+				if(_pwm_count>(5600*1.1f))  //频率改为1.1K，所以时间计数也要换算，电机缓启动时间定为5.6S，这样会比较平缓
+        {       
+					  TimerStop();
             MotorEN(_current_run_motor_ID, MotorEnable);
             _motor_list[_current_run_motor_ID].MotorRunningState = 2;
         }
@@ -256,8 +275,28 @@ void TIM3_IRQHandler()
             MotorEN(_current_run_motor_ID, MotorDisable);
             _motor_list[_current_run_motor_ID].MotorRunningState = 1;
         }
-
-        TIM_SetCompare1(TIM3,START_COUNT - _pwm_count * COUNT_PER_MS);
+				
+        if(_pwm_count<(800*1.1f))  //这里初步定为三个上升斜率      
+				{
+					  _pwm_test = _pwm_count *COUNT_PER_MS1 * 2000.0f / (800.0f*1.1f);
+				}
+        else if(_pwm_count<(2400*1.1f))
+				{
+					  _pwm_test = _pwm_count * COUNT_PER_MS2 * 2000.0f / (1600.0f*1.1f);
+				}
+				else if(_pwm_count<(4000*1.1f))
+				{
+					  _pwm_test = _pwm_count * COUNT_PER_MS3 * 2000.0f / (1600.0f*1.1f);
+				}
+				else if(_pwm_count<(5600*1.1f))  //继续维持一段时间，试下来能有效减小最后一下的冲击电流
+				{
+					  _pwm_test = (4000*1.1f) * COUNT_PER_MS3 * 2000.0f / (1600.0f*1.1f);
+				    if(GlobalVariable.Motor[0].Motorcurrent > 1.2f || GlobalVariable.Motor[0].Motorcurrent < -1.2f)
+				    {
+					      _pwm_test = (4000-2)*1.1f * COUNT_PER_MS3 * 2000.0f / (1600.0f*1.1f);
+				    }
+				}						
+				TIM_SetCompare1(TIM3,START_COUNT - _pwm_test);//(_pwm_count * COUNT_PER_MS));          
     }
     if(TIM_GetITStatus(TIM3,TIM_IT_CC1) != RESET)
     {
@@ -266,3 +305,53 @@ void TIM3_IRQHandler()
     }
 }
 
+
+/***********************PID bak************************
+static signed short _pwm_count1 = 0;
+static signed short _pwm_error = 0;
+static signed short _pwm_errord = 0;
+static signed short _pwm_errordd = 0;
+static signed short _pwm_errorpre = 0;
+static signed short _pwm_errordpre = 0;
+
+//				if(_pwm_count%60 == 0)_pwm_count1 ++;
+//				if(_pwm_count%60 == 0)
+//				{
+//					if((GlobalVariable.Motor[0].Motorcurrent*1000.0f)>0.0f)
+//						{
+//							  _pwm_error = (GlobalVariable.Motor[0].Motorcurrent*1000.0f) - 1000.0f;
+//						}
+//						else
+//						{
+//                _pwm_error = (GlobalVariable.Motor[0].Motorcurrent*(-1000.0f)) - 1000.0f;
+//						}							
+//					  _pwm_errord = _pwm_error - _pwm_errorpre;
+//					  _pwm_errordd = _pwm_errord - _pwm_errordpre;
+//					  _pwm_errorpre = _pwm_error;
+//					  _pwm_errordpre = _pwm_errord;
+//					  _pwm_test += (0.700f*_pwm_errord) + (5.400f*_pwm_error) + (0.000f*_pwm_errordd);
+
+//第二种					_pwm_error = 1000.0f - (GlobalVariable.Motor[0].Motorcurrent*1000.0f);
+//					  _pwm_errord += _pwm_error;
+//					  _pwm_errordd = _pwm_errorpre - _pwm_errordpre;
+//					  _pwm_errordpre = _pwm_errorpre;
+//					  _pwm_errorpre = _pwm_error;
+//					  _pwm_test = (10.000f*_pwm_error) + (6.000f*_pwm_errord) + (0.000f*_pwm_errordd);
+//          if( GlobalVariable.Motor[0].Motorcurrent>1.0f || GlobalVariable.Motor[0].Motorcurrent < -1.0f)
+//					{
+//						_pwm_error = 1000.0f - (GlobalVariable.Motor[0].Motorcurrent*1000.0f);
+//			      _pwm_test = (1.000f*(_pwm_error-_pwm_errorpre)) + (0.000f*_pwm_error) + (0.000f*(_pwm_error-(2*_pwm_errorpre)+_pwm_errordpre));
+//						_pwm_errordpre = _pwm_errorpre;
+//					  _pwm_errorpre = _pwm_error;
+//						_pwm_errord -= _pwm_test;
+//					}
+//					if(_pwm_count1<2000)testtest[_pwm_count1] = GlobalVariable.Motor[0].Motorcurrent;
+//					if(_pwm_count1<2000)testtest1[_pwm_count1] = _pwm_errord;
+//				}
+		
+//				_pwm_test1 = _pwm_test1 + _pwm_test;
+
+
+
+
+******************************************************/

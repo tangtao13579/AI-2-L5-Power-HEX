@@ -10,6 +10,8 @@ static void ConfigParaInit()
     GlobalVariable.ConfigPara.ComID                 = 1;
     
     GlobalVariable.ConfigPara.AngleCorrectionValue  = 0;
+	
+	  GlobalVariable.ConfigPara.MotorOrientation      = 0;
     
     GlobalVariable.ConfigPara.BackAngle             = 90;
     GlobalVariable.ConfigPara.CleaningDockAngle     = 45;
@@ -37,7 +39,7 @@ static void ConfigParaInit()
 static void FixedParaInit()
 {
     HDVInit();
-    GlobalVariable.FixePara.DeviceEdition = 0x1A00;/*Fireware:0.26*/
+    GlobalVariable.FixePara.DeviceEdition = 0x1D00;/*Fireware:0.29*/
     GlobalVariable.FixePara.DeviceEdition |= GetHardwareVersion();
     GlobalVariable.FixePara.DeviceType    = 0x0009;
 }

@@ -25,3 +25,4 @@
 .\output\motorcontrol.o: C:\Keil_v5\ARM\PACK\Keil\STM32F1xx_DFP\2.3.0\Device\StdPeriph_Driver\inc\stm32f10x_usart.h
 .\output\motorcontrol.o: C:\Keil_v5\ARM\PACK\Keil\STM32F1xx_DFP\2.3.0\Device\StdPeriph_Driver\inc\misc.h
 .\output\motorcontrol.o: ..\HAL\MotorControl.h
+.\output\motorcontrol.o: ..\Main\GlobalDefine.h

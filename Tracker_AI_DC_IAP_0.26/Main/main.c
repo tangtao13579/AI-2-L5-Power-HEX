@@ -112,7 +112,7 @@ int main(void)
                  (OS_ERR*  	  )&err);		
     NVICInit();  
     ParaInit();
-//    IWDGInit();
+    IWDGInit();
     OSTaskCreate((OS_TCB *    )&ParameterSaveTCB,
                  (CPU_CHAR *  )"ParameterSave",
                  (OS_TASK_PTR )ParameterSave,

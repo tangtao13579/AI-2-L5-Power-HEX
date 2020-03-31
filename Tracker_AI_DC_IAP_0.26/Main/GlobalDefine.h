@@ -162,6 +162,7 @@ typedef struct
     unsigned short EWindProtectionAngle;
     unsigned short WWindProtectionAngle;
     unsigned short CleaningDockAngle;
+		unsigned short MotorOrientation;       //电机朝向，0为东，1为西
     
 }ConfigParaDef;
 

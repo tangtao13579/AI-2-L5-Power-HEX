@@ -94,7 +94,7 @@ static void RDeviceEdition2_HW1(unsigned char R_or_RW, unsigned short *value )
 {
     if(R_or_RW == 0)
     {
-        *value = ((unsigned short)'2')*0x0100+'6';	//0.26
+        *value = ((unsigned short)'2')*0x0100+'9';	//0.29
     }
 }
 

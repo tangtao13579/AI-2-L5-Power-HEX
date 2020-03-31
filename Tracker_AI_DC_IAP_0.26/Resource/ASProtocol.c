@@ -580,6 +580,22 @@ static void RWCleaningDockAngle(unsigned char R_or_RW, unsigned short *value)
     }
 }
 
+static void RWMotorOrientation(unsigned char R_or_RW, unsigned short *value)
+{
+    if(R_or_RW == 0)
+    {
+        *value = GlobalVariable.ConfigPara.MotorOrientation;
+    }
+    else if(R_or_RW == 1)
+    {
+			  if(*value == 0 || *value == 1)  //0：电机朝东； 1：电机朝西
+        {
+            GlobalVariable.ConfigPara.MotorOrientation = *value;
+            GlobalVariable.WriteFlag.ConfigParaWrite = 1;
+        } 
+    }
+}
+
 static void RWPVModuleWidth1(unsigned char R_or_RW, unsigned short *value)
 {
     if(R_or_RW == 0)
@@ -903,6 +919,8 @@ void ASProtocolInit()
     
     RWRegister[82]  = RWPowerMode;
     RWRegister[84]  = RWCleaningDockAngle;
+		
+		RWRegister[85]  = RWMotorOrientation;
     
     RWRegister[89]  = RWPVModuleWidth1;
     RWRegister[90]  = RWPVModuleWidth2;
