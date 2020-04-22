@@ -264,7 +264,7 @@ void TIM3_IRQHandler()
     {
         TIM_ClearITPendingBit(TIM3, TIM_IT_Update); 
         _pwm_count ++;
-				if(_pwm_count>(5600*1.1f))  //频率改为1.1K，所以时间计数也要换算，电机缓启动时间定为5.6S，这样会比较平缓
+				if(_pwm_count>(6160*1.1f))  //频率改为1.1K，所以时间计数也要换算，电机缓启动时间定为5.6S，这样会比较平缓
         {       
 					  TimerStop();
             MotorEN(_current_run_motor_ID, MotorEnable);
@@ -276,24 +276,24 @@ void TIM3_IRQHandler()
             _motor_list[_current_run_motor_ID].MotorRunningState = 1;
         }
 				
-        if(_pwm_count<(800*1.1f))  //这里初步定为三个上升斜率      
+        if(_pwm_count<(880*1.1f))  //这里初步定为三个上升斜率      
 				{
-					  _pwm_test = _pwm_count *COUNT_PER_MS1 * 2000.0f / (800.0f*1.1f);
+					  _pwm_test = _pwm_count *COUNT_PER_MS1 * 2000.0f / (880.0f*1.1f);
 				}
-        else if(_pwm_count<(2400*1.1f))
+        else if(_pwm_count<(2640*1.1f))
 				{
-					  _pwm_test = _pwm_count * COUNT_PER_MS2 * 2000.0f / (1600.0f*1.1f);
+					  _pwm_test = _pwm_count * COUNT_PER_MS2 * 2000.0f / (1760.0f*1.1f);
 				}
-				else if(_pwm_count<(4000*1.1f))
+				else if(_pwm_count<(4400*1.1f))
 				{
-					  _pwm_test = _pwm_count * COUNT_PER_MS3 * 2000.0f / (1600.0f*1.1f);
+					  _pwm_test = _pwm_count * COUNT_PER_MS3 * 2000.0f / (1760.0f*1.1f);
 				}
-				else if(_pwm_count<(5600*1.1f))  //继续维持一段时间，试下来能有效减小最后一下的冲击电流
+				else if(_pwm_count<(6160*1.1f))  //继续维持一段时间，试下来能有效减小最后一下的冲击电流
 				{
-					  _pwm_test = (4000*1.1f) * COUNT_PER_MS3 * 2000.0f / (1600.0f*1.1f);
-				    if(GlobalVariable.Motor[0].Motorcurrent > 1.2f || GlobalVariable.Motor[0].Motorcurrent < -1.2f)
+					  _pwm_test = (4400*1.1f) * COUNT_PER_MS3 * 2000.0f / (1760.0f*1.1f);
+				    if(GlobalVariable.Motor[0].Motorcurrent > 1.0f || GlobalVariable.Motor[0].Motorcurrent < -1.0f)
 				    {
-					      _pwm_test = (4000-2)*1.1f * COUNT_PER_MS3 * 2000.0f / (1600.0f*1.1f);
+					      _pwm_test = (4400-2)*1.1f * COUNT_PER_MS3 * 2000.0f / (1760.0f*1.1f);
 				    }
 				}						
 				TIM_SetCompare1(TIM3,START_COUNT - _pwm_test);//(_pwm_count * COUNT_PER_MS));          

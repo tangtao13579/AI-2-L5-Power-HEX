@@ -78,8 +78,7 @@ OS_TCB LedIWDGTCB;
 /***************************************************************************************************
                                     OS EVENT FLAG
 ***************************************************************************************************/
-OS_FLAG_GRP	T0AngleNoChange_first_Flags;  //create a event flag
-OS_FLAG_GRP	Motor_continuous_Flags;       //create a event flag
+OS_FLAG_GRP	Power_switch_Flags;  //create a event flag
 /***************************************************************************************************
                                     Task functions declaration
 ***************************************************************************************************/
@@ -100,19 +99,15 @@ static void LedIWDG(void *p_arg);
 int main(void)
 {
     OS_ERR err;
-	
+
     OSInit(&err);
-	  OSFlagCreate((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,		   //指向事件标志组
-                 (CPU_CHAR*	  )"T0AngleNoChange first Flags",	     //名字
-                 (OS_FLAGS	  )T0AngleNoChange_first_FLAGS_VALUE,  //事件标志组初始值
+	  OSFlagCreate((OS_FLAG_GRP*)&Power_switch_Flags,		             //指向事件标志组
+                 (CPU_CHAR*	  )"Power switch Flags",	             //名字
+                 (OS_FLAGS	  )Power_switch_FLAGS_VALUE,           //事件标志组初始值
                  (OS_ERR*  	  )&err);			                         //错误码
-	  OSFlagCreate((OS_FLAG_GRP*)&Motor_continuous_Flags,		         //指向事件标志组
-                 (CPU_CHAR*	  )"Motor continuous Flags",	         //名字
-                 (OS_FLAGS	  )Motor_continuous_FLAGS_VALUE,       //事件标志组初始值
-                 (OS_ERR*  	  )&err);		
     NVICInit();  
     ParaInit();
-    IWDGInit();
+ //   IWDGInit();
     OSTaskCreate((OS_TCB *    )&ParameterSaveTCB,
                  (CPU_CHAR *  )"ParameterSave",
                  (OS_TASK_PTR )ParameterSave,
@@ -521,7 +516,7 @@ static void MotorAngleControl(void *p_arg)
                     if(GlobalVariable.WorkMode.Target - GlobalVariable.Motor[0].ActualAngle > GlobalVariable.ConfigPara.EWTracingAccuracy)
                     {
                         GlobalVariable.Motor[0].MotorControlDir = 2;
-                        if(dir_sw_delay ++ > 200)
+											  if(dir_sw_delay ++ > 200)    //电机判断到需要转动到实际转动有2S延时
                         {
                             motor_control_state = 2; /* West */
                             dir_sw_delay = 0;
@@ -530,7 +525,7 @@ static void MotorAngleControl(void *p_arg)
                     else if (GlobalVariable.WorkMode.Target - GlobalVariable.Motor[0].ActualAngle <(-1 * GlobalVariable.ConfigPara.EWTracingAccuracy))
                     {
                         GlobalVariable.Motor[0].MotorControlDir = 1;
-                        if(dir_sw_delay ++ >200)
+                        if(dir_sw_delay ++ >200)     //电机判断到需要转动到实际转动有2S延时
                         {
                             motor_control_state = 1; /* East */
                             dir_sw_delay = 0;
@@ -542,33 +537,6 @@ static void MotorAngleControl(void *p_arg)
                         motor_control_state = 0;
                         dir_sw_delay = 0;
                         GlobalVariable.Motor[0].MotorControlDir = 0;
-											  
-											  OSFlagPend((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,
-				                           (OS_FLAGS	)T0AngleNoChange_first_step2_FLAG,
-		     	                         (OS_TICK     )0,
-				                           (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
-				                           (CPU_TS*     )0,
-				                           (OS_ERR*	    )&err);
-		                    if(err == OS_ERR_NONE)
-		                    {
-			                      OSFlagPost((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,      //post a event flag step3
-								                       (OS_FLAGS	  )T0AngleNoChange_first_step3_FLAG,
-								                       (OS_OPT	  )OS_OPT_POST_FLAG_SET,
-					                             (OS_ERR*	  )&err);
-		                    } 
-                        OSFlagPend((OS_FLAG_GRP*)&Motor_continuous_Flags,
-				                           (OS_FLAGS	)Motor_continuous_step2_FLAG,
-		     	                         (OS_TICK     )0,
-				                           (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
-				                           (CPU_TS*     )0,
-				                           (OS_ERR*	    )&err);
-		                    if(err == OS_ERR_NONE)
-		                    {                  
-			                      OSFlagPost((OS_FLAG_GRP*)&Motor_continuous_Flags,           //post a event flag step3
-								                       (OS_FLAGS	  )Motor_continuous_step3_FLAG,
-								                       (OS_OPT	  )OS_OPT_POST_FLAG_SET,
-					                             (OS_ERR*	  )&err);
-		                    }												
                     }
                     break;
                 case 1:/* East */
@@ -581,8 +549,8 @@ static void MotorAngleControl(void *p_arg)
                     }
                     else
                     {
-                        MotorTurnEast(0);
-											  motor_turn_delay ++;     //电机连续运行时间累加
+												motor_turn_delay ++;     //电机连续运行时间累加
+											  MotorTurnEast(0);
                     }
                     break;
                 case 2:/* West */
@@ -594,9 +562,9 @@ static void MotorAngleControl(void *p_arg)
 											  motor_turn_delay = 0;    //电机连续运行时间清零
                     }
                     else
-                    {
-                        MotorTurnWest(0);
-											  motor_turn_delay ++;     //电机连续运行时间累加
+                    {         
+												motor_turn_delay ++;     //电机连续运行时间累加
+											  MotorTurnWest(0);
                     }
                     break;
                 default:
@@ -610,46 +578,72 @@ static void MotorAngleControl(void *p_arg)
             MotorAllStop();
             motor_control_state = 0;
             GlobalVariable.Motor[0].MotorControlDir = 0;
-					  motor_turn_delay = 0;                                  //电机连续运行时间清零
-						
-					  OSFlagPend((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,
-				               (OS_FLAGS	)T0AngleNoChange_first_step2_FLAG,
-		     	             (OS_TICK     )0,
-				               (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
-				               (CPU_TS*     )0,
-				               (OS_ERR*	    )&err);
-		        if(err == OS_ERR_NONE)
-		        {
-			          OSFlagPost((OS_FLAG_GRP*)&T0AngleNoChange_first_Flags,      //post a event flag step3
-								           (OS_FLAGS	  )T0AngleNoChange_first_step3_FLAG,
-								           (OS_OPT	  )OS_OPT_POST_FLAG_SET,
-					                 (OS_ERR*	  )&err);
-		        } 
-						OSFlagPend((OS_FLAG_GRP*)&Motor_continuous_Flags,
-				               (OS_FLAGS	)Motor_continuous_step2_FLAG,
-		     	             (OS_TICK     )0,
-				               (OS_OPT	    )OS_OPT_PEND_FLAG_SET_ALL+OS_OPT_PEND_FLAG_CONSUME+OS_OPT_PEND_NON_BLOCKING,
-				               (CPU_TS*     )0,
-				               (OS_ERR*	    )&err);
-		        if(err == OS_ERR_NONE)
-		        {
-			          OSFlagPost((OS_FLAG_GRP*)&Motor_continuous_Flags,          //post a event flag step3
-								           (OS_FLAGS	  )Motor_continuous_step3_FLAG,
-								           (OS_OPT	  )OS_OPT_POST_FLAG_SET,
-					                 (OS_ERR*	  )&err);
-		        } 
-						
+					  motor_turn_delay = 0;                                  //电机连续运行时间清零	
         }
 				
 				if(motor_turn_delay > 2000)                                //连续转动时间超出20S，换电池驱动
 				{
 					  motor_turn_delay = 0;                                  //电机连续运行时间清零
-					  OSFlagPost((OS_FLAG_GRP*)&Motor_continuous_Flags,      //post a event flag step1
-					             (OS_FLAGS	  )Motor_continuous_step1_FLAG,
-								       (OS_OPT	  )OS_OPT_POST_FLAG_SET,
-					             (OS_ERR*	  )&err);	
+					  OSFlagPost((OS_FLAG_GRP*)&Power_switch_Flags,          //post a event switch bat
+					             (OS_FLAGS	  )Power_switch_BAT_FLAG,
+								       (OS_OPT	    )OS_OPT_POST_FLAG_SET,
+					             (OS_ERR*	    )&err);	
 				}
-        
+				if( (motor_control_state == 0) && (GlobalVariable.Motor[0].MotorControlDir != 0) ) //表明电机在准备转动阶段，2S时间
+				{
+				    if( ((GlobalVariable.WorkMode.WorkMode & 0xFF) != AUTO_TRACKER_MODE) &&        //不是自动跟踪模式
+								((GlobalVariable.WorkMode.WorkMode & 0xFF) != AUTO_AI_MODE) 			)        //不是AI模式
+						{
+						    OSFlagPost((OS_FLAG_GRP*)&Power_switch_Flags,                              //post a event switch bat
+					                 (OS_FLAGS	  )Power_switch_BAT_FLAG,
+								           (OS_OPT	    )OS_OPT_POST_FLAG_SET,
+					                 (OS_ERR*	    )&err);	               
+						}
+						else                                                                           //自动跟踪模式和AI模式
+						{
+						    if(GlobalVariable.Motor[0].MotorControlDir == 2)                           //to west
+								{
+							      if( GlobalVariable.Motor[0].ActualAngle < 90 )
+							      {
+										    OSFlagPost((OS_FLAG_GRP*)&Power_switch_Flags,                      //post a event switch bat
+														       (OS_FLAGS	  )Power_switch_BAT_FLAG,
+																	 (OS_OPT	    )OS_OPT_POST_FLAG_SET,
+																	 (OS_ERR*	    )&err);
+							      }
+							      else
+									  {
+										    OSFlagPost((OS_FLAG_GRP*)&Power_switch_Flags,                      //post a event switch PV
+														       (OS_FLAGS	  )Power_switch_PV_FLAG,
+																	 (OS_OPT	    )OS_OPT_POST_FLAG_SET,
+																	 (OS_ERR*	    )&err);
+									  }
+								}
+								else if(GlobalVariable.Motor[0].MotorControlDir == 1)                      //to east
+								{
+									  if( GlobalVariable.Motor[0].ActualAngle > 90 )
+							      {
+							          OSFlagPost((OS_FLAG_GRP*)&Power_switch_Flags,                      //post a event switch bat
+														       (OS_FLAGS	  )Power_switch_BAT_FLAG,
+																	 (OS_OPT	    )OS_OPT_POST_FLAG_SET,
+																	 (OS_ERR*	    )&err);
+							      }
+							      else
+									  {
+										    OSFlagPost((OS_FLAG_GRP*)&Power_switch_Flags,                      //post a event switch PV
+														       (OS_FLAGS	  )Power_switch_PV_FLAG,
+																	 (OS_OPT	    )OS_OPT_POST_FLAG_SET,
+																	 (OS_ERR*	    )&err);
+									  }
+								}
+						}
+				}
+				else if( (motor_control_state == 0) && (GlobalVariable.Motor[0].MotorControlDir == 0) ) //电机停止转动的时候
+				{
+				    OSFlagPost((OS_FLAG_GRP*)&Power_switch_Flags,                                  //post a event switch PV
+														       (OS_FLAGS	  )Power_switch_PV_FLAG,
+																	 (OS_OPT	    )OS_OPT_POST_FLAG_SET,
+																	 (OS_ERR*	    )&err);											
+				}
         GlobalVariable.Motor[0].MotorRunningState = GetMotorRunningState(0);
         GlobalVariable.Motor[0].MotorActualDir = GetMotorDirState(0);
         OSTimeDly(1,OS_OPT_TIME_DLY,&err);
