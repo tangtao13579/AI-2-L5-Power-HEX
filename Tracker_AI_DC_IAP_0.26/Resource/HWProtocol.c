@@ -94,7 +94,7 @@ static void RDeviceEdition2_HW1(unsigned char R_or_RW, unsigned short *value )
 {
     if(R_or_RW == 0)
     {
-        *value = ((unsigned short)'2')*0x0100+'9';	//0.29
+        *value = ((unsigned short)'3')*0x0100+'0';	//0.30
     }
 }
 
@@ -143,7 +143,7 @@ static void RWWorkMode_HW6(unsigned char R_or_RW, unsigned short *value )
     {
 		switch(GlobalVariable.WorkMode.WorkMode)
 		{
-			case MAINTENANCE_MODE:	//维护
+			case CLEAN_MODE:	//维护
 				*value=0x0000;
 				break;
 			case AUTO_TRACKER_MODE:	//自动跟踪
@@ -176,7 +176,7 @@ static void RWWorkMode_HW6(unsigned char R_or_RW, unsigned short *value )
 		switch(*value)
 		{
 			case 0x0000:	//维护
-				GlobalVariable.WorkMode.WorkMode=MAINTENANCE_MODE;
+				GlobalVariable.WorkMode.WorkMode=CLEAN_MODE;
 				break;
 			case 0x0001:	//自动跟踪
 				GlobalVariable.WorkMode.WorkMode=AUTO_TRACKER_MODE;

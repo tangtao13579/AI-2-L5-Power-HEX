@@ -21,6 +21,7 @@ static void ManualMode(void);
 
 static void MaintenanceMode(void);
 static void AngleCalibrationMode(void);
+static void CleanMode(void);
 
 static void AutoWindMode(void);
 static void AutoBatSOCLowMode(void);
@@ -126,6 +127,10 @@ static void IdelMode()
     {
         WorkModeFunction = AngleCalibrationMode;
     }
+		else if((GlobalVariable.WorkMode.WorkMode & 0xF0) == CLEAN_MODE)							//清洗模式
+		{
+			  WorkModeFunction = CleanMode;
+		}
     else
     {
         GlobalVariable.WorkMode.WorkMode = 0x00;
@@ -157,10 +162,23 @@ static void ManualMode()
     }
 }
 
-static void MaintenanceMode()
+static void MaintenanceMode()	//	维护模式-放平
 {
-    if(((GlobalVariable.WorkMode.WorkMode & 0xF0) != MAINTENANCE_MODE)
-     ||((GlobalVariable.WorkMode.WorkMode & 0x0F) != 0))
+    if(((GlobalVariable.WorkMode.WorkMode & 0xF0) != MAINTENANCE_MODE)||
+			 ((GlobalVariable.WorkMode.WorkMode & 0x0F) != 0))
+    {
+        WorkModeFunction = IdelMode;
+        return;
+    }
+    GlobalVariable.Motor[0].NeedLeadAngle = 0;
+    GlobalVariable.WorkMode.Target = 90.0;
+    GlobalVariable.Motor[0].MotorEnable = 1;
+}
+
+static void CleanMode()	//清洗模式
+{
+    if(((GlobalVariable.WorkMode.WorkMode & 0xF0) != CLEAN_MODE)||
+			 ((GlobalVariable.WorkMode.WorkMode & 0x0F) != 0))
     {
         WorkModeFunction = IdelMode;
         return;

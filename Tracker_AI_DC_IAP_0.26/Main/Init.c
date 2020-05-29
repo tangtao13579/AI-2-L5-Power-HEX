@@ -39,7 +39,7 @@ static void ConfigParaInit()
 static void FixedParaInit()
 {
     HDVInit();
-    GlobalVariable.FixePara.DeviceEdition = 0x1D00;/*Fireware:0.29*/
+    GlobalVariable.FixePara.DeviceEdition = 0x1E00;/*Fireware:0.30*/
     GlobalVariable.FixePara.DeviceEdition |= GetHardwareVersion();
     GlobalVariable.FixePara.DeviceType    = 0x0009;
 }

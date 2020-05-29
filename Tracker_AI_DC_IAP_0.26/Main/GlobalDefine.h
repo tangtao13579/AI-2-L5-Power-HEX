@@ -3,6 +3,7 @@
 
 #define MAINTENANCE_MODE            0x40
 #define ANGLE_CALIBRATION_MODE      0x80
+#define CLEAN_MODE									0x60
 
 #define AUTO_MODE                   0x20
 #define AUTO_TRACKER_MODE           0x20
